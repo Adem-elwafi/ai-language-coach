@@ -1,20 +1,42 @@
 // components/JournalEntry.jsx
 import React, { useState } from 'react';
+import aiService from '../api/aiService';
+import { formatApiError, validateTextInput, parseAnalysisResult } from '../utils/apiHelpers';
 
 const JournalEntry = () => {
   const [text, setText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [analysis, setAnalysis] = useState(null);
+  const [error, setError] = useState(null);
   
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!text.trim()) return;
     
+    // Validate input
+    const validation = validateTextInput(text, 10);
+    if (!validation.isValid) {
+      setError(validation.error);
+      return;
+    }
+    
     setIsSubmitting(true);
-    console.log('Text submitted:', text);
-    // We'll implement AI analysis later
-    setTimeout(() => {
+    setError(null);
+    setAnalysis(null);
+    
+    try {
+      const result = await aiService.analyzeText(text, { useMock: true });
+      const parsed = parseAnalysisResult(result);
+      setAnalysis(parsed);
+      // Keep form but allow new submission
+      setText('');
+    } catch (err) {
+      const formatted = formatApiError(err);
+      setError(formatted.message);
+      console.error('Analysis error:', formatted);
+    } finally {
       setIsSubmitting(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -28,6 +50,13 @@ const JournalEntry = () => {
             Describe your day, thoughts, or experiences in French. The AI will analyze and correct your writing.
           </p>
         </div>
+        
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-red-700 text-sm font-medium">Error: {error}</p>
+          </div>
+        )}
         
         <div className="space-y-2">
           <label className="block text-sm font-medium text-gray-700">
@@ -68,6 +97,66 @@ const JournalEntry = () => {
           </button>
         </div>
       </form>
+
+      {/* Analysis Results Section */}
+      {analysis && (
+        <div className="mt-8 space-y-6 border-t border-gray-200 pt-6">
+          <div>
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">Analysis Results</h3>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-gray-700 text-sm leading-relaxed">{analysis.summary}</p>
+            </div>
+          </div>
+
+          {/* Errors Found */}
+          {analysis.errors && analysis.errors.length > 0 && (
+            <div>
+              <h4 className="text-lg font-semibold text-gray-800 mb-3">Issues Found</h4>
+              <div className="space-y-3">
+                {analysis.errors.map((err, idx) => (
+                  <div key={idx} className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <div className="flex justify-between mb-2">
+                      <span className="font-medium text-yellow-900">{err.issue}</span>
+                      <span className="text-sm text-yellow-700">Issue #{err.index}</span>
+                    </div>
+                    <p className="text-sm text-gray-700 mb-2">
+                      <span className="font-mono bg-yellow-100 px-2 py-1 rounded">{err.example}</span>
+                    </p>
+                    <p className="text-sm text-green-700">
+                      ✓ Suggestion: <span className="font-mono bg-green-100 px-2 py-1 rounded">{err.suggestion}</span>
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Corrections */}
+          {analysis.corrections && (
+            <div>
+              <h4 className="text-lg font-semibold text-gray-800 mb-3">Full Corrections</h4>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <p className="text-gray-700 text-sm whitespace-pre-wrap font-mono">{analysis.corrections}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Learning Tip */}
+          {analysis.tip && (
+            <div>
+              <h4 className="text-lg font-semibold text-gray-800 mb-2">💡 Learning Tip</h4>
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                <p className="text-gray-700 text-sm">{analysis.tip}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Provider Info */}
+          <div className="text-xs text-gray-500 text-right mt-4">
+            Analyzed using {analysis.provider} provider
+          </div>
+        </div>
+      )}
     </div>
   );
 };
