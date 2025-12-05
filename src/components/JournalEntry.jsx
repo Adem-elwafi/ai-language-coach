@@ -1,13 +1,18 @@
 // components/JournalEntry.jsx
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import aiService from '../api/aiService';
 import { formatApiError, validateTextInput, parseAnalysisResult } from '../utils/apiHelpers';
+import CorrectionDisplay from './CorrectionDisplay';
+import ExplanationPanel from './ExplanaitionPanel';
+import ProgressTracker from './ProgressTracker';
 
 const JournalEntry = () => {
   const [text, setText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [analysis, setAnalysis] = useState(null);
   const [error, setError] = useState(null);
+  const [lastInput, setLastInput] = useState('');
+  const [submissionCount, setSubmissionCount] = useState(0);
   
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -23,12 +28,15 @@ const JournalEntry = () => {
     setIsSubmitting(true);
     setError(null);
     setAnalysis(null);
-    
+
+    const submittedText = text;
+
     try {
       const result = await aiService.analyzeText(text, { useMock: true });
       const parsed = parseAnalysisResult(result);
       setAnalysis(parsed);
-      // Keep form but allow new submission
+      setLastInput(submittedText);
+      setSubmissionCount((c) => c + 1);
       setText('');
     } catch (err) {
       const formatted = formatApiError(err);
@@ -38,6 +46,22 @@ const JournalEntry = () => {
       setIsSubmitting(false);
     }
   };
+
+  const progressStats = useMemo(() => {
+    const grammarScore = Math.max(40, 95 - (analysis?.errors?.length || 0) * 10);
+    return {
+      entries: submissionCount,
+      streak: Math.max(1, submissionCount),
+      categories: {
+        grammar: grammarScore,
+        vocabulary: 70,
+        fluency: 65,
+      },
+      achievements: submissionCount
+        ? ['First analysis completed', `${submissionCount}-entry streak`, 'Accepted corrections ready']
+        : ['Submit your first entry to unlock achievements'],
+    };
+  }, [analysis, submissionCount]);
 
   return (
     <div className="bg-white rounded-2xl shadow-lg p-6">
@@ -155,6 +179,19 @@ const JournalEntry = () => {
           <div className="text-xs text-gray-500 text-right mt-4">
             Analyzed using {analysis.provider} provider
           </div>
+
+          {/* Connected components grid */}
+          <div className="grid gap-6 lg:grid-cols-2">
+            <CorrectionDisplay
+              originalText={lastInput}
+              correctedText={analysis.corrections}
+              errors={analysis.errors}
+            />
+
+            <ExplanationPanel errors={analysis.errors} tip={analysis.tip} />
+          </div>
+
+          <ProgressTracker stats={progressStats} />
         </div>
       )}
     </div>
