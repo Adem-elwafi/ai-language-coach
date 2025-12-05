@@ -7,7 +7,7 @@ Files:
 Usage (example):
 
 ```js
-import aiService from './services/aiService';
+import aiService from './aiService';
 
 // 1) For local development, use mock responses (default)
 aiService.configure({ provider: 'mock', useMock: true });

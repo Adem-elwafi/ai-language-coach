@@ -3,11 +3,21 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+
+  "repository": {
+
+    "type": "git",
+    "url": "https://github.com/yourusername/ai-language-coach"
+  },
+  "homepage": "https://github.com/yourusername/ai-language-coach#readme",
+
+
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
+    
   },
   "dependencies": {
     "react": "^19.2.0",
@@ -29,7 +39,14 @@
   },
   "description": "This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.",
   "main": "eslint.config.js",
-  "keywords": [],
+  "keywords": [
+        "react",
+    "vite",
+    "tailwindcss",
+    "french-learning",
+    "ai-language-tutor",
+    "language-learning-app"
+  ],
   "author": "",
   "license": "ISC"
 }
