@@ -58,12 +58,32 @@ export function validateTextInput(text, minLength = 10) {
 export function parseAnalysisResult(result) {
   if (!result) return null;
 
+  // Real OpenAI API response structure: result.analysis contains the data
+  const data = result.analysis || result;
+
+  // Map OpenAI error format to match component expectations
+  const errors = Array.isArray(data.errors) 
+    ? data.errors.map((err, idx) => ({
+        index: idx + 1,
+        issue: err.type || err.issue || 'Grammar issue',
+        example: err.original || err.example || '',
+        suggestion: err.corrected || err.suggestion || '',
+        explanation: err.explanation || '',
+        severity: err.severity || 'medium',
+      }))
+    : [];
+
   return {
-    summary: result.summary || 'No summary available',
-    errors: Array.isArray(result.errors) ? result.errors : [],
-    corrections: result.corrections || '',
-    tip: result.tip || '',
-    provider: result.provider || 'mock',
+    summary: data.summary || 'No summary available',
+    errors,
+    corrections: data.corrections || '',
+    tip: data.tipOfTheDay || data.tip || '',
+    provider: result.provider || result.model || 'unknown',
+    cefrLevel: data.cefrLevel || null,
+    vocabulary: data.vocabulary || [],
+    culturalNote: data.culturalNote || null,
+    strengths: data.strengths || [],
+    nextSteps: data.nextSteps || null,
   };
 }
 

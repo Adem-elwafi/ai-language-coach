@@ -32,7 +32,7 @@ const JournalEntry = () => {
     const submittedText = text;
 
     try {
-      const result = await aiService.analyzeText(text, { useMock: true });
+      const result = await aiService.analyzeText(text);
       const parsed = parseAnalysisResult(result);
       setAnalysis(parsed);
       setLastInput(submittedText);
