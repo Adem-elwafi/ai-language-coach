@@ -31,7 +31,7 @@ Provide a comprehensive analysis in this EXACT JSON format (ensure valid JSON):
       "ruleReference": "Brief rule name (e.g., 'Accord du participe passé', 'Subjonctif après il faut que')"
     }
   ],
-  "corrections": "Full corrected text with all errors fixed, maintaining the original meaning and style",
+  "corrections": "Full corrected text with all errors fixed , with making the sentense  more readable  ",
   "vocabulary": [
     {
       "word": "original word or phrase",

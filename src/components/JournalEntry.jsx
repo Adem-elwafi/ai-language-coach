@@ -5,6 +5,7 @@ import { formatApiError, validateTextInput, parseAnalysisResult } from '../utils
 import CorrectionDisplay from './CorrectionDisplay';
 import ExplanationPanel from './ExplanaitionPanel';
 import ProgressTracker from './ProgressTracker';
+import LearningDashboard from './LearningDashboard';
 
 const JournalEntry = () => {
   const [text, setText] = useState('');
@@ -64,7 +65,11 @@ const JournalEntry = () => {
   }, [analysis, submissionCount]);
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-6">
+    <div className="space-y-6">
+      {/* Learning Dashboard */}
+      <LearningDashboard compact={true} />
+      
+      <div className="bg-white rounded-2xl shadow-lg p-6">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <h2 className="text-2xl font-semibold text-gray-800 mb-2">
@@ -194,6 +199,7 @@ const JournalEntry = () => {
           <ProgressTracker stats={progressStats} />
         </div>
       )}
+    </div>
     </div>
   );
 };
