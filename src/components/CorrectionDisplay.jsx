@@ -1,15 +1,36 @@
 import React, { useMemo, useState } from 'react';
+import { useAnalysis } from '../context/AnalysisContext';
 
 /**
  * Shows original vs corrected text with simple diff highlights and lets users
  * accept/reject individual corrections derived from the analysis errors.
  */
 const CorrectionDisplay = ({ originalText = '', correctedText = '', errors = [] }) => {
-	const [decisions, setDecisions] = useState({});
+	const { currentAnalysis, userChoices, trackCorrectionChoice } = useAnalysis();
+	const [localDecisions, setLocalDecisions] = useState({});
+
+	// Use context data if available, fallback to props
+	const analysisErrors = currentAnalysis?.errors || errors;
+	const origText = originalText;
+	const corrText = currentAnalysis?.corrections || correctedText;
+
+	// Transform analysis errors into corrections for display
+	const corrections = useMemo(() => {
+		if (!analysisErrors || analysisErrors.length === 0) return [];
+		
+		return analysisErrors.map((error, index) => ({
+			id: index + 1,
+			original: error.example || 'Original text',
+			corrected: error.suggestion || 'Corrected text',
+			explanation: `Error: ${error.issue}`,
+			issue: error.issue || 'Grammar error',
+			severity: error.severity || 'medium'
+		}));
+	}, [analysisErrors]);
 
 	const diffTokens = useMemo(() => {
-		const originalWords = (originalText || '').split(/(\s+)/);
-		const correctedWords = (correctedText || '').split(/(\s+)/);
+		const originalWords = (origText || '').split(/(\s+)/);
+		const correctedWords = (corrText || '').split(/(\s+)/);
 		const max = Math.max(originalWords.length, correctedWords.length);
 		const tokens = [];
 		for (let i = 0; i < max; i++) {
@@ -19,10 +40,29 @@ const CorrectionDisplay = ({ originalText = '', correctedText = '', errors = [] 
 			tokens.push({ original: o, corrected: c, changed });
 		}
 		return tokens;
-	}, [originalText, correctedText]);
+	}, [origText, corrText]);
+
+	// Get initial decision from context
+	const getInitialDecision = (correctionId) => {
+		if (userChoices.acceptedCorrections.includes(correctionId)) return 'accepted';
+		if (userChoices.rejectedCorrections.includes(correctionId)) return 'rejected';
+		return null;
+	};
+
+	const handleAccept = (correctionId, issue) => {
+		console.log('Accepted correction:', correctionId, issue);
+		setLocalDecisions((prev) => ({ ...prev, [issue]: 'accepted' }));
+		trackCorrectionChoice(correctionId, true); // Track in shared context
+	};
+
+	const handleReject = (correctionId, issue) => {
+		console.log('Rejected correction:', correctionId, issue);
+		setLocalDecisions((prev) => ({ ...prev, [issue]: 'rejected' }));
+		trackCorrectionChoice(correctionId, false); // Track in shared context
+	};
 
 	const handleDecision = (issue, value) => {
-		setDecisions((prev) => ({ ...prev, [issue]: value }));
+		setLocalDecisions((prev) => ({ ...prev, [issue]: value }));
 	};
 
 	return (
@@ -38,7 +78,7 @@ const CorrectionDisplay = ({ originalText = '', correctedText = '', errors = [] 
 			<div className="grid md:grid-cols-2 gap-4">
 				<div className="p-4 rounded-xl border border-gray-200 bg-gray-50">
 					<h4 className="text-sm font-semibold text-gray-700 mb-2">Original</h4>
-					<p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">{originalText || '—'}</p>
+					<p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">{origText || '—'}</p>
 				</div>
 				<div className="p-4 rounded-xl border border-green-200 bg-green-50">
 					<h4 className="text-sm font-semibold text-gray-700 mb-2">Corrected</h4>
@@ -58,12 +98,12 @@ const CorrectionDisplay = ({ originalText = '', correctedText = '', errors = [] 
 			{/* Individual corrections list */}
 			<div className="space-y-3">
 				<h4 className="text-sm font-semibold text-gray-700">Correction Details</h4>
-				{errors.length === 0 && (
+				{analysisErrors.length === 0 && (
 					<p className="text-sm text-gray-500">No specific issues were identified.</p>
 				)}
 
-				{errors.map((err, idx) => {
-					const decision = decisions[err.issue];
+				{analysisErrors.map((err, idx) => {
+					const decision = localDecisions[err.issue] || getInitialDecision(idx + 1);
 					return (
 						<div
 							key={idx}
@@ -84,7 +124,7 @@ const CorrectionDisplay = ({ originalText = '', correctedText = '', errors = [] 
 							<div className="flex items-center gap-2">
 								<button
 									type="button"
-									onClick={() => handleDecision(err.issue, 'accepted')}
+									onClick={() => handleAccept(idx + 1, err.issue)}
 									className={`px-3 py-2 rounded-lg text-sm font-medium transition-all border ${
 										decision === 'accepted'
 											? 'bg-green-600 text-white border-green-600'
@@ -97,7 +137,7 @@ const CorrectionDisplay = ({ originalText = '', correctedText = '', errors = [] 
 								</button>
 								<button
 									type="button"
-									onClick={() => handleDecision(err.issue, 'rejected')}
+									onClick={() => handleReject(idx + 1, err.issue)}
 									className={`px-3 py-2 rounded-lg text-sm font-medium transition-all border ${
 										decision === 'rejected'
 											? 'bg-red-600 text-white border-red-600'

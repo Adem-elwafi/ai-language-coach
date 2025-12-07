@@ -25,13 +25,29 @@ const responseCache = new Map();
 
 export function configure(opts = {}) {
   config = { ...config, ...opts };
-  // Validate API key on configuration
-  if (config.apiKey && config.apiKey !== 'your_openai_api_key_here') {
+  
+  // AUTO-CONFIGURE: Detect and use environment API key
+  const envApiKey = import.meta.env.VITE_OPENAI_API_KEY;
+  
+  if (envApiKey && envApiKey.startsWith('sk-')) {
+    config.apiKey = envApiKey;
+    config.provider = 'openai';
     config.useMock = false;
-    console.log('✅ OpenAI API configured');
-  } else if (!config.useMock) {
-    console.warn('⚠️ No valid API key found, falling back to mock mode');
+    console.log('🔑 OpenAI API key loaded from environment (.env.local)');
+    console.log(`📊 Provider: ${config.provider} | Model: ${config.model} | Cache: ${config.cacheEnabled ? '✅' : '❌'}`);
+  } else if (config.apiKey && config.apiKey.startsWith('sk-')) {
+    config.provider = 'openai';
+    config.useMock = false;
+    console.log('🔑 OpenAI API key loaded from config options');
+    console.log(`📊 Provider: ${config.provider} | Model: ${config.model} | Cache: ${config.cacheEnabled ? '✅' : '❌'}`);
+  } else if (opts.useMock === true || import.meta.env.VITE_USE_MOCK_AI === 'true') {
     config.useMock = true;
+    console.log('🤖 Using mock data (no API key found or mock mode enabled)');
+  } else {
+    config.useMock = true;
+    console.warn('⚠️ No valid OpenAI API key found, falling back to mock mode');
+    console.warn('   To enable real AI, add VITE_OPENAI_API_KEY to .env.local');
+    console.warn('   Get key from: https://platform.openai.com/api-keys');
   }
 }
 
@@ -260,7 +276,7 @@ export async function analyzeText(text, options = {}) {
 
   // Use mock data in development or when API key not configured
   if (useMock) {
-    console.log('🔧 Using mock data');
+    console.log('🤖 Using mock data (AI disabled)');
     return mockData.analyze(text);
   }
 
@@ -273,6 +289,7 @@ export async function analyzeText(text, options = {}) {
   const prompt = buildAnalysisPrompt(text, userLevel);
 
   try {
+    console.log(`🧠 Analyzing French text (${userLevel} level)...`);
     const response = await runProvider(prompt, {
       jsonMode: true,
       temperature: 0.3,
@@ -296,11 +313,13 @@ export async function analyzeText(text, options = {}) {
 
     // Cache the successful response
     setCache(cacheKey, result);
+    console.log(`✅ Real AI analysis received (${response.model})`);
     
     return result;
   } catch (err) {
     // Auto-fallback to mock on API errors
-    console.error('❌ API error, falling back to mock:', err.message);
+    console.error('❌ Real AI API error, falling back to mock:', err.message);
+    console.error('   Error details:', err);
     
     costTracker.trackRequest({
       model: config.model,

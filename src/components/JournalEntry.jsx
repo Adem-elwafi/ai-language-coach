@@ -1,5 +1,6 @@
 // components/JournalEntry.jsx
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
+import { useAnalysis } from '../context/AnalysisContext';
 import aiService from '../api/aiService';
 import { formatApiError, validateTextInput, parseAnalysisResult } from '../utils/apiHelpers';
 import CorrectionDisplay from './CorrectionDisplay';
@@ -10,11 +11,17 @@ import LearningDashboard from './LearningDashboard';
 const JournalEntry = () => {
   const [text, setText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [analysis, setAnalysis] = useState(null);
+  const { currentAnalysis, updateAnalysis, progress } = useAnalysis();
   const [error, setError] = useState(null);
   const [lastInput, setLastInput] = useState('');
   const [submissionCount, setSubmissionCount] = useState(0);
   
+console.log('Context Debug:', { 
+  hasAnalysis: !!currentAnalysis,
+  analysisKeys: currentAnalysis ? Object.keys(currentAnalysis) : 'none',
+  progress: progress 
+});
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!text.trim()) return;
@@ -28,28 +35,69 @@ const JournalEntry = () => {
     
     setIsSubmitting(true);
     setError(null);
-    setAnalysis(null);
 
-    const submittedText = text;
+    console.log('=== SUBMISSION START ===');
+    console.log('Text submitted:', text);
 
     try {
+      console.log('1. Calling analyzeText...');
+
       const result = await aiService.analyzeText(text);
+
+      console.log('2. Raw API result:', result);
+      console.log('3. Result type:', typeof result);
+      console.log('4. Result keys:', Object.keys(result || {}));
+      
       const parsed = parseAnalysisResult(result);
-      setAnalysis(parsed);
-      setLastInput(submittedText);
+      console.log('5. Parsed analysis:', parsed);
+      console.log('6. Parsed keys:', Object.keys(parsed || {}));
+      
+      console.log('7. Calling updateAnalysis...');
+      updateAnalysis(parsed);
+      console.log('8. updateAnalysis called');
+
+      setTimeout(() => {
+        console.log('9. Context after update (delayed):', {
+          hasAnalysis: !!currentAnalysis,
+          analysis: currentAnalysis,
+        });
+      }, 100);
+
+      setLastInput(text);
       setSubmissionCount((c) => c + 1);
       setText('');
     } catch (err) {
-      const formatted = formatApiError(err);
-      setError(formatted.message);
-      console.error('Analysis error:', formatted);
+      console.error('SUBMISSION ERROR:', err);
+      const errorMsg = formatApiError(err);
+      setError(errorMsg.userMessage || errorMsg.message);
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // TEMP: simple data helper for debugging context updates
+  const testSimpleUpdate = useCallback(() => {
+    const testAnalysis = {
+      summary: 'TEST: Your text has 2 errors',
+      errors: [{ issue: 'TEST Error', example: 'test wrong', suggestion: 'test correct' }],
+      corrections: 'TEST corrected text',
+      tip: 'TEST learning tip',
+    };
+
+    console.log('TEST: Updating with simple data:', testAnalysis);
+    updateAnalysis(testAnalysis);
+  }, [updateAnalysis]);
+
+  useEffect(() => {
+    window.__testSimpleUpdate = testSimpleUpdate;
+    return () => {
+      delete window.__testSimpleUpdate;
+    };
+  }, [testSimpleUpdate]);
+
+  // Optionally, you can use progress from context instead of local progressStats
   const progressStats = useMemo(() => {
-    const grammarScore = Math.max(40, 95 - (analysis?.errors?.length || 0) * 10);
+    const grammarScore = Math.max(40, 95 - (currentAnalysis?.errors?.length || 0) * 10);
     return {
       entries: submissionCount,
       streak: Math.max(1, submissionCount),
@@ -62,7 +110,7 @@ const JournalEntry = () => {
         ? ['First analysis completed', `${submissionCount}-entry streak`, 'Accepted corrections ready']
         : ['Submit your first entry to unlock achievements'],
     };
-  }, [analysis, submissionCount]);
+  }, [currentAnalysis, submissionCount]);
 
   return (
     <div className="space-y-6">
@@ -128,21 +176,21 @@ const JournalEntry = () => {
       </form>
 
       {/* Analysis Results Section */}
-      {analysis && (
+      {currentAnalysis && (
         <div className="mt-8 space-y-6 border-t border-gray-200 pt-6">
           <div>
             <h3 className="text-xl font-semibold text-gray-800 mb-2">Analysis Results</h3>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-gray-700 text-sm leading-relaxed">{analysis.summary}</p>
+              <p className="text-gray-700 text-sm leading-relaxed">{currentAnalysis.summary}</p>
             </div>
           </div>
 
           {/* Errors Found */}
-          {analysis.errors && analysis.errors.length > 0 && (
+          {currentAnalysis.errors && currentAnalysis.errors.length > 0 && (
             <div>
               <h4 className="text-lg font-semibold text-gray-800 mb-3">Issues Found</h4>
               <div className="space-y-3">
-                {analysis.errors.map((err, idx) => (
+                {currentAnalysis.errors.map((err, idx) => (
                   <div key={idx} className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                     <div className="flex justify-between mb-2">
                       <span className="font-medium text-yellow-900">{err.issue}</span>
@@ -161,39 +209,39 @@ const JournalEntry = () => {
           )}
 
           {/* Corrections */}
-          {analysis.corrections && (
+          {currentAnalysis.corrections && (
             <div>
               <h4 className="text-lg font-semibold text-gray-800 mb-3">Full Corrections</h4>
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <p className="text-gray-700 text-sm whitespace-pre-wrap font-mono">{analysis.corrections}</p>
+                <p className="text-gray-700 text-sm whitespace-pre-wrap font-mono">{currentAnalysis.corrections}</p>
               </div>
             </div>
           )}
 
           {/* Learning Tip */}
-          {analysis.tip && (
+          {currentAnalysis.tip && (
             <div>
               <h4 className="text-lg font-semibold text-gray-800 mb-2">💡 Learning Tip</h4>
               <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                <p className="text-gray-700 text-sm">{analysis.tip}</p>
+                <p className="text-gray-700 text-sm">{currentAnalysis.tip}</p>
               </div>
             </div>
           )}
 
           {/* Provider Info */}
           <div className="text-xs text-gray-500 text-right mt-4">
-            Analyzed using {analysis.provider} provider
+            Analyzed using {currentAnalysis.provider} provider
           </div>
 
           {/* Connected components grid */}
           <div className="grid gap-6 lg:grid-cols-2">
             <CorrectionDisplay
               originalText={lastInput}
-              correctedText={analysis.corrections}
-              errors={analysis.errors}
+              correctedText={currentAnalysis.corrections}
+              errors={currentAnalysis.errors}
             />
 
-            <ExplanationPanel errors={analysis.errors} tip={analysis.tip} />
+            <ExplanationPanel errors={currentAnalysis.errors} tip={currentAnalysis.tip} />
           </div>
 
           <ProgressTracker stats={progressStats} />

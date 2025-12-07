@@ -1,39 +1,132 @@
 import React, { useMemo, useState } from 'react';
+import { useAnalysis } from '../context/AnalysisContext';
 
 /**
- * Tracks learner progress with mock data: category scores, streaks, achievements, and suggested paths.
+ * Tracks learner progress: category scores, streaks, achievements, and suggested paths.
  */
 const ProgressTracker = ({
 	stats = {
-		entries: 5,
-		streak: 3,
+		entries: 0,
+		streak: 0,
 		categories: {
-			grammar: 68,
-			vocabulary: 74,
-			fluency: 61,
+			grammar: 0,
+			vocabulary: 0,
+			fluency: 0,
 		},
-		achievements: ['Started journaling', '3-day streak', 'First correction accepted'],
+		achievements: [],
 	},
 }) => {
+	const { currentAnalysis, userChoices, progress } = useAnalysis();
 	const [activeCategory, setActiveCategory] = useState('grammar');
 	const [showAchievements, setShowAchievements] = useState(true);
 
-	const categoryList = useMemo(() => Object.keys(stats.categories || {}), [stats.categories]);
-
-	const suggestions = useMemo(() => {
-		switch (activeCategory) {
-			case 'grammar':
-				return ['Review past tense forms', 'Practice article usage', 'Do 5 sentence rewrites'];
-			case 'vocabulary':
-				return ['Learn 10 food words', 'Create flashcards', 'Use 3 new adjectives today'];
-			case 'fluency':
-				return ['Read aloud for 5 minutes', 'Record a 1-minute summary', 'Shadow a native clip'];
-			default:
-				return ['Keep practicing daily!', 'Reflect on mistakes', 'Celebrate progress'];
+	// Calculate REAL scores based on actual data
+	const scores = useMemo(() => {
+		if (!currentAnalysis) {
+			return { grammar: 0, vocabulary: 0, fluency: 0 };
 		}
-	}, [activeCategory]);
 
-	const score = stats.categories?.[activeCategory] ?? 0;
+		// Grammar score: Based on error count and acceptance
+		const totalErrors = currentAnalysis.errors?.length || 0;
+		const acceptedCount = userChoices.acceptedCorrections.length;
+		const grammarScore = Math.max(0, 100 - (totalErrors * 15) + (acceptedCount * 10));
+
+		// Vocabulary score: Based on text complexity (simplified)
+		const textLength = currentAnalysis.summary?.length || 0;
+		const vocabScore = Math.min(Math.floor(textLength / 3), 100);
+
+		// Fluency score: Based on acceptance rate and error severity
+		const totalChoices =
+			userChoices.acceptedCorrections.length + userChoices.rejectedCorrections.length;
+		const fluencyScore =
+			totalChoices > 0
+				? Math.floor((userChoices.acceptedCorrections.length / totalChoices) * 100)
+				: 50; // Default middle score
+
+		return {
+			grammar: Math.min(grammarScore, 100),
+			vocabulary: Math.min(vocabScore, 100),
+			fluency: Math.min(fluencyScore, 100),
+		};
+	}, [currentAnalysis, userChoices]);
+
+	// Use actual streak from context
+	const streak = progress.streak || 0;
+
+	// Use actual total entries from context
+	const totalEntries = progress.totalEntries || 0;
+
+	const categoryList = useMemo(() => Object.keys(scores), [scores]);
+
+	// Dynamic achievements based on actual progress
+	const achievements = useMemo(
+		() => [
+			{
+				id: 1,
+				name: 'First Entry',
+				unlocked: totalEntries >= 1,
+				description: 'Submit your first journal entry',
+			},
+			{
+				id: 2,
+				name: 'Grammar Guru',
+				unlocked: scores.grammar >= 80,
+				description: 'Achieve 80% grammar score',
+			},
+			{
+				id: 3,
+				name: 'Vocabulary Master',
+				unlocked: scores.vocabulary >= 85,
+				description: 'Achieve 85% vocabulary score',
+			},
+			{
+				id: 4,
+				name: 'Consistent Learner',
+				unlocked: streak >= 7,
+				description: '7-day writing streak',
+			},
+			{
+				id: 5,
+				name: 'Error Hunter',
+				unlocked: userChoices.acceptedCorrections.length >= 10,
+				description: 'Accept 10 corrections',
+			},
+		],
+		[totalEntries, scores, streak, userChoices]
+	);
+
+	// Personalized suggestions based on performance
+	const suggestions = useMemo(() => {
+		const baseSuggestions = [
+			'Try writing about your weekend plans.',
+			'Describe a memorable meal you had recently.',
+			'Write about your favorite French city or region.',
+			'Explain how you practice French outside of this app.',
+			'Describe a recent movie or book you enjoyed.',
+		];
+
+		// Personalized suggestions based on weak areas
+		const personalized = [];
+
+		if (scores.grammar < 70) {
+			personalized.push('Focus on reviewing verb conjugations in your next entry.');
+		}
+
+		if (scores.vocabulary < 70) {
+			personalized.push('Try using 3 new vocabulary words in your next entry.');
+		}
+
+		if (currentAnalysis?.errors?.length > 2) {
+			const commonError = currentAnalysis.errors[0]?.issue;
+			personalized.push(
+				`Pay attention to ${commonError?.toLowerCase() || 'common errors'} in your next entry.`
+			);
+		}
+
+		return [...personalized, ...baseSuggestions].slice(0, 3);
+	}, [scores, currentAnalysis]);
+
+	const score = scores[activeCategory] ?? 0;
 
 	return (
 		<div className="bg-white rounded-2xl shadow-lg p-6 space-y-6 border border-gray-100">
@@ -42,10 +135,10 @@ const ProgressTracker = ({
 					<h3 className="text-xl font-semibold text-gray-800">Progress Tracker</h3>
 					<p className="text-gray-500 text-sm">See how your writing improves over time.</p>
 				</div>
-				<div className="text-right text-sm text-gray-600">
-					<p>Entries: <span className="font-semibold text-gray-800">{stats.entries}</span></p>
-					<p>Streak: <span className="font-semibold text-primary-600">{stats.streak} days</span></p>
-				</div>
+			<div className="text-right text-sm text-gray-600">
+				<p>Entries: <span className="font-semibold text-gray-800">{totalEntries}</span></p>
+				<p>Streak: <span className="font-semibold text-primary-600">{streak} days</span></p>
+			</div>
 			</div>
 
 			{/* Category selectors */}
@@ -108,22 +201,33 @@ const ProgressTracker = ({
 					<span className="font-semibold text-gray-800">Achievements</span>
 					<span className="text-xs text-gray-500">{showAchievements ? 'Hide' : 'Show'}</span>
 				</button>
-				{showAchievements && (
-					<div className="p-4 space-y-2 bg-white">
-						{(stats.achievements || []).map((ach, idx) => (
-							<div
-								key={idx}
-								className="flex items-center gap-2 text-sm text-gray-700"
-							>
-								<span className="w-2 h-2 rounded-full bg-primary-500" aria-hidden="true" />
-								<span>{ach}</span>
-							</div>
-						))}
-						{(!stats.achievements || stats.achievements.length === 0) && (
-							<p className="text-sm text-gray-500">No achievements yet — submit your first entry!</p>
-						)}
-					</div>
-				)}
+			{showAchievements && (
+				<div className="p-4 space-y-2 bg-white">
+					{achievements.map((ach) => (
+						<div
+							key={ach.id}
+							className={`flex items-center gap-2 p-2 rounded-lg text-sm ${
+								ach.unlocked
+									? 'bg-green-50 text-green-800'
+									: 'bg-gray-50 text-gray-500 opacity-60'
+							}`}
+							title={ach.description}
+						>
+							<span
+								className={`w-3 h-3 rounded-full ${
+									ach.unlocked ? 'bg-green-500' : 'bg-gray-300'
+								}`}
+								aria-hidden="true"
+							/>
+							<span className="font-medium">{ach.name}</span>
+							{ach.unlocked && <span className="ml-auto text-xs">✓</span>}
+						</div>
+					))}
+					{achievements.filter((a) => a.unlocked).length === 0 && (
+						<p className="text-sm text-gray-500">No achievements yet — submit your first entry!</p>
+					)}
+				</div>
+			)}
 			</div>
 		</div>
 	);

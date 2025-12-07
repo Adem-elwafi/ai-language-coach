@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
+import { useAnalysis } from '../context/AnalysisContext';
 import { analyzeErrors } from '../utils/errorDetector.js';
 import { generateProgressiveQuiz, validateAnswer, generateHint, QuestionTypes } from '../utils/quizGenerator.js';
 import { recordAttempt, getRuleMastery, getUserStats, getRulePerformance } from '../utils/learningTracker.js';
@@ -11,6 +12,7 @@ import { recordAttempt, getRuleMastery, getUserStats, getRulePerformance } from 
  * - Adaptive learning with performance tracking
  */
 const ExplanationPanel = ({ errors = [], tip = '' }) => {
+	const { currentAnalysis, userChoices, trackQuizAnswer } = useAnalysis();
 	const [openIndex, setOpenIndex] = useState(0);
 	const [quizAnswers, setQuizAnswers] = useState({});
 	const [showHints, setShowHints] = useState({});
@@ -18,13 +20,16 @@ const ExplanationPanel = ({ errors = [], tip = '' }) => {
 	const [userStats, setUserStats] = useState(null);
 	const [showCelebration, setShowCelebration] = useState(false);
 
+	// Use real errors from context if available, fallback to props
+	const analysisErrors = currentAnalysis?.errors || errors;
+
 	// Analyze errors and enrich with grammar rules
 	const enrichedErrors = useMemo(() => {
-		if (!errors || errors.length === 0) {
+		if (!analysisErrors || analysisErrors.length === 0) {
 			return [];
 		}
-		return analyzeErrors(errors);
-	}, [errors]);
+		return analyzeErrors(analysisErrors);
+	}, [analysisErrors]);
 
 	// Generate educational quizzes
 	const quizData = useMemo(() => {
@@ -46,10 +51,20 @@ const ExplanationPanel = ({ errors = [], tip = '' }) => {
 		});
 	}, [enrichedErrors]);
 
-	// Load user stats
+	// Load user stats and initialize quiz answers from context
 	useEffect(() => {
 		setUserStats(getUserStats());
-	}, []);
+		
+		// Initialize quiz answers from context if they exist
+		if (userChoices.quizAnswers && Object.keys(userChoices.quizAnswers).length > 0) {
+			// Map context quiz answers to component format
+			const contextAnswers = {};
+			Object.entries(userChoices.quizAnswers).forEach(([ruleId, isCorrect]) => {
+				contextAnswers[ruleId] = isCorrect;
+			});
+			setQuizAnswers(prev => ({ ...prev, ...contextAnswers }));
+		}
+	}, [userChoices.quizAnswers]);
 
 	const handleAnswerSelect = (errorIndex, quizIndex, answer) => {
 		const key = `${errorIndex}-${quizIndex}`;
@@ -73,6 +88,11 @@ const ExplanationPanel = ({ errors = [], tip = '' }) => {
 		const ruleId = quizData[errorIndex].error.detectedType || 'unknown';
 		const result = recordAttempt(ruleId, validation.correct, validation.points);
 
+		// Track in shared context
+		if (trackQuizAnswer) {
+			trackQuizAnswer(ruleId, validation.correct);
+		}
+
 		// Update stats
 		setUserStats(getUserStats());
 
@@ -87,6 +107,19 @@ const ExplanationPanel = ({ errors = [], tip = '' }) => {
 		const key = `${errorIndex}-${quizIndex}`;
 		setShowHints((prev) => ({ ...prev, [key]: !prev[key] }));
 	};
+
+	// Debug: Log when component receives real analysis data
+	useEffect(() => {
+		if (currentAnalysis && currentAnalysis.errors && currentAnalysis.errors.length > 0) {
+			console.log('📚 ExplanationPanel using context data:', {
+				totalErrors: currentAnalysis.errors.length,
+				enrichedErrorsCount: enrichedErrors.length,
+				quizDataCount: quizData.length,
+				errors: currentAnalysis.errors.map(e => e.issue),
+				userQuizAnswers: userChoices.quizAnswers
+			});
+		}
+	}, [currentAnalysis, enrichedErrors, quizData, userChoices]);
 
 	if (enrichedErrors.length === 0) {
 		return (

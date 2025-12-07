@@ -4,6 +4,8 @@ const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 const analyze = async (text) => {
   await delay(250);
   return {
+    provider: 'mock',
+    model: 'mock-data',
     summary: 'The text shows basic sentence structure but contains tense inconsistencies and article misuse.',
     errors: [
       { index: 1, issue: 'Article usage', example: 'I have car', suggestion: 'I have a car' },
@@ -20,12 +22,18 @@ const correct = async (text) => {
   // naive mock: replace some common mistakes
   let corrected = text.replace(/\bI have car\b/gi, 'I have a car');
   corrected = corrected.replace(/\bShe go to school yesterday\b/gi, 'She went to school yesterday');
-  return { original: text, corrected, raw: 'MOCK_CORRECTION_RAW' };
+  return { 
+    provider: 'mock',
+    original: text, 
+    corrected, 
+    raw: 'MOCK_CORRECTION_RAW' 
+  };
 };
 
 const suggestions = async (text) => {
   await delay(150);
   return {
+    provider: 'mock',
     suggestions: [
       'Check and regularize verb tenses (past vs present).',
       'Use articles before singular countable nouns: a, an, the.',
