@@ -8,13 +8,14 @@ import ExplanationPanel from './ExplanaitionPanel';
 import ProgressTracker from './ProgressTracker';
 import LearningDashboard from './LearningDashboard';
 
-const JournalEntry = () => {
+const JournalEntry = ({ onJournalSubmit }) => {
   const [text, setText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { currentAnalysis, updateAnalysis, progress } = useAnalysis();
   const [error, setError] = useState(null);
   const [lastInput, setLastInput] = useState('');
   const [submissionCount, setSubmissionCount] = useState(0);
+  const [showQuizModal, setShowQuizModal] = useState(false);
   
 console.log('Context Debug:', { 
   hasAnalysis: !!currentAnalysis,
@@ -66,6 +67,11 @@ console.log('Context Debug:', {
       setLastInput(text);
       setSubmissionCount((c) => c + 1);
       setText('');
+      
+      // Trigger callback to show components
+      if (onJournalSubmit) {
+        onJournalSubmit();
+      }
     } catch (err) {
       console.error('SUBMISSION ERROR:', err);
       const errorMsg = formatApiError(err);
@@ -153,7 +159,7 @@ console.log('Context Debug:', {
           </div>
         </div>
         
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-3">
           <button
             type="submit"
             disabled={!text.trim() || isSubmitting}
@@ -172,82 +178,128 @@ console.log('Context Debug:', {
               'Analyze & Correct'
             )}
           </button>
+          
+          {currentAnalysis && (
+            <button
+              onClick={() => setShowQuizModal(true)}
+              className="px-8 py-3 rounded-xl font-medium transition-all bg-indigo-500 hover:bg-indigo-600 text-white shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+            >
+              📋 Quiz & Corrections
+            </button>
+          )}
         </div>
       </form>
-
-      {/* Analysis Results Section */}
-      {currentAnalysis && (
-        <div className="mt-8 space-y-6 border-t border-gray-200 pt-6">
-          <div>
-            <h3 className="text-xl font-semibold text-gray-800 mb-2">Analysis Results</h3>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-gray-700 text-sm leading-relaxed">{currentAnalysis.summary}</p>
-            </div>
-          </div>
-
-          {/* Errors Found */}
-          {currentAnalysis.errors && currentAnalysis.errors.length > 0 && (
-            <div>
-              <h4 className="text-lg font-semibold text-gray-800 mb-3">Issues Found</h4>
-              <div className="space-y-3">
-                {currentAnalysis.errors.map((err, idx) => (
-                  <div key={idx} className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <div className="flex justify-between mb-2">
-                      <span className="font-medium text-yellow-900">{err.issue}</span>
-                      <span className="text-sm text-yellow-700">Issue #{err.index}</span>
-                    </div>
-                    <p className="text-sm text-gray-700 mb-2">
-                      <span className="font-mono bg-yellow-100 px-2 py-1 rounded">{err.example}</span>
-                    </p>
-                    <p className="text-sm text-green-700">
-                      ✓ Suggestion: <span className="font-mono bg-green-100 px-2 py-1 rounded">{err.suggestion}</span>
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Corrections */}
-          {currentAnalysis.corrections && (
-            <div>
-              <h4 className="text-lg font-semibold text-gray-800 mb-3">Full Corrections</h4>
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <p className="text-gray-700 text-sm whitespace-pre-wrap font-mono">{currentAnalysis.corrections}</p>
-              </div>
-            </div>
-          )}
-
-          {/* Learning Tip */}
-          {currentAnalysis.tip && (
-            <div>
-              <h4 className="text-lg font-semibold text-gray-800 mb-2">💡 Learning Tip</h4>
-              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                <p className="text-gray-700 text-sm">{currentAnalysis.tip}</p>
-              </div>
-            </div>
-          )}
-
-          {/* Provider Info */}
-          <div className="text-xs text-gray-500 text-right mt-4">
-            Analyzed using {currentAnalysis.provider} provider
-          </div>
-
-          {/* Connected components grid */}
-          <div className="grid gap-6 lg:grid-cols-2">
-            <CorrectionDisplay
-              originalText={lastInput}
-              correctedText={currentAnalysis.corrections}
-              errors={currentAnalysis.errors}
-            />
-
-            <ExplanationPanel errors={currentAnalysis.errors} tip={currentAnalysis.tip} />
-          </div>
-
-          <ProgressTracker stats={progressStats} />
-        </div>
-      )}
     </div>
+    
+    {/* Quiz & Corrections Modal */}
+    {showQuizModal && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto">
+          {/* Modal Header */}
+          <div className="sticky top-0 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white p-6 flex justify-between items-center">
+            <h2 className="text-2xl font-bold">📋 Quiz & Corrections Review</h2>
+            <button
+              onClick={() => setShowQuizModal(false)}
+              className="text-2xl hover:bg-indigo-500 p-1 rounded-lg transition-all"
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Modal Content */}
+          <div className="p-8 space-y-8">
+            {/* Progress Tracker at Top */}
+            <div>
+              <h3 className="text-xl font-bold text-gray-800 mb-4">📊 Your Progress</h3>
+              <ProgressTracker stats={progressStats} />
+            </div>
+
+            {/* Original vs Corrected */}
+            <div>
+              <h3 className="text-xl font-bold text-gray-800 mb-4">📝 Original vs Corrected Text</h3>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="p-6 rounded-xl border-2 border-red-200 bg-red-50">
+                  <h4 className="font-semibold text-red-700 mb-3">Your Original Text</h4>
+                  <p className="text-gray-700 whitespace-pre-wrap leading-relaxed text-sm">{lastInput}</p>
+                </div>
+                <div className="p-6 rounded-xl border-2 border-green-200 bg-green-50">
+                  <h4 className="font-semibold text-green-700 mb-3">AI Corrections</h4>
+                  <p className="text-gray-700 whitespace-pre-wrap leading-relaxed text-sm font-mono">{currentAnalysis?.corrections}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Detailed Errors */}
+            {currentAnalysis?.errors && currentAnalysis.errors.length > 0 && (
+              <div>
+                <h3 className="text-xl font-bold text-gray-800 mb-4">⚠️ Detailed Error Analysis ({currentAnalysis.errors.length} errors found)</h3>
+                <div className="space-y-4">
+                  {currentAnalysis.errors.map((err, idx) => (
+                    <div key={idx} className="border-l-4 border-yellow-400 bg-yellow-50 p-4 rounded-lg">
+                      <div className="flex justify-between mb-2">
+                        <span className="font-bold text-yellow-900 text-lg">{err.issue}</span>
+                        <span className="bg-yellow-200 text-yellow-900 px-3 py-1 rounded-full text-sm font-semibold">Error #{idx + 1}</span>
+                      </div>
+                      <div className="mt-3 space-y-2">
+                        <p className="text-sm text-gray-700">
+                          <span className="font-semibold">❌ Wrong:</span> 
+                          <code className="ml-2 bg-red-100 text-red-800 px-2 py-1 rounded text-xs">{err.example}</code>
+                        </p>
+                        <p className="text-sm text-gray-700">
+                          <span className="font-semibold">✓ Correct:</span> 
+                          <code className="ml-2 bg-green-100 text-green-800 px-2 py-1 rounded text-xs">{err.suggestion}</code>
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Summary */}
+            {currentAnalysis?.summary && (
+              <div>
+                <h3 className="text-xl font-bold text-gray-800 mb-4">📊 Analysis Summary</h3>
+                <div className="bg-blue-50 border-l-4 border-blue-500 p-6 rounded-lg">
+                  <p className="text-gray-700 leading-relaxed">{currentAnalysis.summary}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Learning Tip */}
+            {currentAnalysis?.tip && (
+              <div>
+                <h3 className="text-xl font-bold text-gray-800 mb-4">💡 Learning Tip</h3>
+                <div className="bg-purple-50 border-l-4 border-purple-500 p-6 rounded-lg">
+                  <p className="text-gray-700 leading-relaxed">{currentAnalysis.tip}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Explanation Panel */}
+            <div>
+              <h3 className="text-xl font-bold text-gray-800 mb-4">📚 Grammar & Language Tips</h3>
+              <ExplanationPanel errors={currentAnalysis?.errors} tip={currentAnalysis?.tip} />
+            </div>
+
+            {/* Provider Info */}
+            <div className="text-xs text-gray-500 text-right border-t pt-4">
+              Analyzed using {currentAnalysis?.provider} provider
+            </div>
+          </div>
+
+          {/* Modal Footer */}
+          <div className="sticky bottom-0 bg-gray-100 p-6 flex justify-end gap-3 border-t border-gray-200">
+            <button
+              onClick={() => setShowQuizModal(false)}
+              className="px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-medium transition-all"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
     </div>
   );
 };

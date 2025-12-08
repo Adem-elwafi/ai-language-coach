@@ -1,77 +1,21 @@
-import React, { useMemo, useState } from 'react';
+import React from 'react';
 import { useAnalysis } from '../context/AnalysisContext';
 
 /**
- * Shows original vs corrected text with simple diff highlights and lets users
- * accept/reject individual corrections derived from the analysis errors.
+ * Shows original vs corrected text side by side
  */
-const CorrectionDisplay = ({ originalText = '', correctedText = '', errors = [] }) => {
-	const { currentAnalysis, userChoices, trackCorrectionChoice } = useAnalysis();
-	const [localDecisions, setLocalDecisions] = useState({});
+const CorrectionDisplay = ({ originalText = '', correctedText = '' }) => {
+	const { currentAnalysis } = useAnalysis();
 
 	// Use context data if available, fallback to props
-	const analysisErrors = currentAnalysis?.errors || errors;
 	const origText = originalText;
 	const corrText = currentAnalysis?.corrections || correctedText;
 
-	// Transform analysis errors into corrections for display
-	const corrections = useMemo(() => {
-		if (!analysisErrors || analysisErrors.length === 0) return [];
-		
-		return analysisErrors.map((error, index) => ({
-			id: index + 1,
-			original: error.example || 'Original text',
-			corrected: error.suggestion || 'Corrected text',
-			explanation: `Error: ${error.issue}`,
-			issue: error.issue || 'Grammar error',
-			severity: error.severity || 'medium'
-		}));
-	}, [analysisErrors]);
-
-	const diffTokens = useMemo(() => {
-		const originalWords = (origText || '').split(/(\s+)/);
-		const correctedWords = (corrText || '').split(/(\s+)/);
-		const max = Math.max(originalWords.length, correctedWords.length);
-		const tokens = [];
-		for (let i = 0; i < max; i++) {
-			const o = originalWords[i] || '';
-			const c = correctedWords[i] || '';
-			const changed = o !== c;
-			tokens.push({ original: o, corrected: c, changed });
-		}
-		return tokens;
-	}, [origText, corrText]);
-
-	// Get initial decision from context
-	const getInitialDecision = (correctionId) => {
-		if (userChoices.acceptedCorrections.includes(correctionId)) return 'accepted';
-		if (userChoices.rejectedCorrections.includes(correctionId)) return 'rejected';
-		return null;
-	};
-
-	const handleAccept = (correctionId, issue) => {
-		console.log('Accepted correction:', correctionId, issue);
-		setLocalDecisions((prev) => ({ ...prev, [issue]: 'accepted' }));
-		trackCorrectionChoice(correctionId, true); // Track in shared context
-	};
-
-	const handleReject = (correctionId, issue) => {
-		console.log('Rejected correction:', correctionId, issue);
-		setLocalDecisions((prev) => ({ ...prev, [issue]: 'rejected' }));
-		trackCorrectionChoice(correctionId, false); // Track in shared context
-	};
-
-	const handleDecision = (issue, value) => {
-		setLocalDecisions((prev) => ({ ...prev, [issue]: value }));
-	};
-
 	return (
 		<div className="bg-white rounded-2xl shadow-lg p-6 space-y-6 border border-gray-100">
-			<div className="flex items-center justify-between">
-				<div>
-					<h3 className="text-xl font-semibold text-gray-800">Corrections</h3>
-					<p className="text-gray-500 text-sm">Compare your original text with AI corrections.</p>
-				</div>
+			<div>
+				<h3 className="text-xl font-semibold text-gray-800">Corrections</h3>
+				<p className="text-gray-500 text-sm">Compare your original text with AI corrections.</p>
 			</div>
 
 			{/* Side-by-side text */}
@@ -82,79 +26,8 @@ const CorrectionDisplay = ({ originalText = '', correctedText = '', errors = [] 
 				</div>
 				<div className="p-4 rounded-xl border border-green-200 bg-green-50">
 					<h4 className="text-sm font-semibold text-gray-700 mb-2">Corrected</h4>
-					<div className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">
-						{diffTokens.map((tok, idx) => (
-							<span
-								key={idx}
-								className={tok.changed ? 'bg-green-100 text-green-800 rounded-sm px-1' : ''}
-							>
-								{tok.corrected}
-							</span>
-						))}
-					</div>
+					<p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">{corrText || '—'}</p>
 				</div>
-			</div>
-
-			{/* Individual corrections list */}
-			<div className="space-y-3">
-				<h4 className="text-sm font-semibold text-gray-700">Correction Details</h4>
-				{analysisErrors.length === 0 && (
-					<p className="text-sm text-gray-500">No specific issues were identified.</p>
-				)}
-
-				{analysisErrors.map((err, idx) => {
-					const decision = localDecisions[err.issue] || getInitialDecision(idx + 1);
-					return (
-						<div
-							key={idx}
-							className="border border-yellow-200 bg-yellow-50 rounded-xl p-4 flex flex-col gap-3"
-						>
-							<div className="flex items-start justify-between gap-3">
-								<div>
-									<p className="text-sm font-semibold text-yellow-900">Issue: {err.issue}</p>
-									<p className="text-xs text-gray-600">Example: {err.example}</p>
-								</div>
-								<span className="text-xs text-yellow-700">#{err.index || idx + 1}</span>
-							</div>
-
-							<div className="text-sm text-green-800">
-								✓ Suggestion: <span className="font-mono bg-green-100 px-2 py-1 rounded">{err.suggestion}</span>
-							</div>
-
-							<div className="flex items-center gap-2">
-								<button
-									type="button"
-									onClick={() => handleAccept(idx + 1, err.issue)}
-									className={`px-3 py-2 rounded-lg text-sm font-medium transition-all border ${
-										decision === 'accepted'
-											? 'bg-green-600 text-white border-green-600'
-											: 'bg-white text-green-700 border-green-300 hover:bg-green-50'
-									}`}
-									aria-pressed={decision === 'accepted'}
-									aria-label={`Accept correction for ${err.issue}`}
-								>
-									Accept
-								</button>
-								<button
-									type="button"
-									onClick={() => handleReject(idx + 1, err.issue)}
-									className={`px-3 py-2 rounded-lg text-sm font-medium transition-all border ${
-										decision === 'rejected'
-											? 'bg-red-600 text-white border-red-600'
-											: 'bg-white text-red-700 border-red-300 hover:bg-red-50'
-									}`}
-									aria-pressed={decision === 'rejected'}
-									aria-label={`Reject correction for ${err.issue}`}
-								>
-									Reject
-								</button>
-								{decision && (
-									<span className="text-xs text-gray-600">You {decision} this correction.</span>
-								)}
-							</div>
-						</div>
-					);
-				})}
 			</div>
 		</div>
 	);
