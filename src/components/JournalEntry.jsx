@@ -3,13 +3,14 @@ import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { useAnalysis } from '../context/AnalysisContext';
 import aiService from '../api/aiService';
 import { formatApiError, validateTextInput, parseAnalysisResult } from '../utils/apiHelpers';
+import { saveToHistory } from '../utils/historyManager';
 import CorrectionDisplay from './CorrectionDisplay';
 import ExplanationPanel from './ExplanaitionPanel';
 import ProgressTracker from './ProgressTracker';
 import LearningDashboard from './LearningDashboard';
 
-const JournalEntry = ({ onJournalSubmit }) => {
-  const [text, setText] = useState('');
+const JournalEntry = ({ onJournalSubmit, loadedEntry = null }) => {
+  const [text, setText] = useState(loadedEntry?.originalText || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { currentAnalysis, updateAnalysis, progress } = useAnalysis();
   const [error, setError] = useState(null);
@@ -23,6 +24,14 @@ console.log('Context Debug:', {
   progress: progress 
 });
 
+  // Load analysis when entry is loaded from history
+  useEffect(() => {
+    if (loadedEntry?.analysis) {
+      updateAnalysis(loadedEntry.analysis);
+      setLastInput(loadedEntry.originalText);
+      console.log('Loaded entry from history:', loadedEntry);
+    }
+  }, [loadedEntry]);
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!text.trim()) return;
@@ -66,6 +75,10 @@ console.log('Context Debug:', {
 
       setLastInput(text);
       setSubmissionCount((c) => c + 1);
+      
+      // Save to history
+      saveToHistory(text, parsed.corrections, parsed);
+      
       setText('');
       
       // Trigger callback to show components
@@ -119,18 +132,19 @@ console.log('Context Debug:', {
   }, [currentAnalysis, submissionCount]);
 
   return (
-    <div className="space-y-6">
-      {/* Learning Dashboard */}
+    <div className="space-y-3">
+      {/* Learning Dashboard - Compact */}
       <LearningDashboard compact={true} />
       
-      <div className="bg-white rounded-2xl shadow-lg p-6">
-      <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Main Form */}
+      <div className="bg-white rounded-lg shadow p-4">
+      <form onSubmit={handleSubmit} className="space-y-2">
         <div>
-          <h2 className="text-2xl font-semibold text-gray-800 mb-2">
+          <h2 className="text-lg font-semibold text-gray-800 mb-1">
             Write about your day:
           </h2>
-          <p className="text-gray-600 mb-4">
-            Describe your day, thoughts, or experiences in French. The AI will analyze and correct your writing.
+          <p className="text-xs text-gray-600 mb-2">
+            Describe your day in French. The AI will analyze and correct your writing.
           </p>
         </div>
         
@@ -149,21 +163,21 @@ console.log('Context Debug:', {
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="Aujourd'hui, je suis allé au marché et j'ai acheté des pommes..."
-            rows={8}
-            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all resize-none"
+            rows={5}
+            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all resize-none"
             disabled={isSubmitting}
           />
-          <div className="flex justify-between items-center text-sm text-gray-500">
-            <span>{text.length} characters</span>
-            <span>Min. 50 characters recommended</span>
+          <div className="flex justify-between items-center text-xs text-gray-500">
+            <span>{text.length} chars</span>
+            <span>Min. 50 recommended</span>
           </div>
         </div>
         
-        <div className="flex justify-end gap-3">
+        <div className="flex justify-end gap-2">
           <button
             type="submit"
             disabled={!text.trim() || isSubmitting}
-            className={`px-8 py-3 rounded-xl font-medium transition-all ${
+            className={`px-6 py-2 text-sm rounded-lg font-medium transition-all ${
               !text.trim() || isSubmitting
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 : 'bg-primary-500 hover:bg-primary-600 text-white shadow-md hover:shadow-lg transform hover:-translate-y-0.5'
@@ -171,7 +185,7 @@ console.log('Context Debug:', {
           >
             {isSubmitting ? (
               <span className="flex items-center gap-2">
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                 Analyzing...
               </span>
             ) : (
@@ -182,7 +196,7 @@ console.log('Context Debug:', {
           {currentAnalysis && (
             <button
               onClick={() => setShowQuizModal(true)}
-              className="px-8 py-3 rounded-xl font-medium transition-all bg-indigo-500 hover:bg-indigo-600 text-white shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+              className="px-6 py-2 text-sm rounded-lg font-medium transition-all bg-indigo-500 hover:bg-indigo-600 text-white shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
             >
               📋 Quiz & Corrections
             </button>
