@@ -137,26 +137,26 @@ console.log('Context Debug:', {
       <LearningDashboard compact={true} />
       
       {/* Main Form */}
-      <div className="bg-white rounded-lg shadow p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-4">
       <form onSubmit={handleSubmit} className="space-y-2">
         <div>
-          <h2 className="text-lg font-semibold text-gray-800 mb-1">
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-1">
             Write about your day:
           </h2>
-          <p className="text-xs text-gray-600 mb-2">
+          <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
             Describe your day in French. The AI will analyze and correct your writing.
           </p>
         </div>
         
         {/* Error Message */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-700 text-sm font-medium">Error: {error}</p>
+          <div className="bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 rounded-lg p-4">
+            <p className="text-red-700 dark:text-red-200 text-sm font-medium">Error: {error}</p>
           </div>
         )}
         
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Your journal entry (in French):
           </label>
           <textarea
@@ -164,10 +164,10 @@ console.log('Context Debug:', {
             onChange={(e) => setText(e.target.value)}
             placeholder="Aujourd'hui, je suis allé au marché et j'ai acheté des pommes..."
             rows={5}
-            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all resize-none"
+            className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all resize-none"
             disabled={isSubmitting}
           />
-          <div className="flex justify-between items-center text-xs text-gray-500">
+          <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
             <span>{text.length} chars</span>
             <span>Min. 50 recommended</span>
           </div>
@@ -208,14 +208,13 @@ console.log('Context Debug:', {
     {/* Quiz & Corrections Modal */}
     {showQuizModal && (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto">
           {/* Modal Header */}
-          <div className="sticky top-0 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white p-6 flex justify-between items-center">
+          <div className="sticky top-0 bg-gradient-to-r from-indigo-600 to-indigo-700 dark:from-indigo-700 dark:to-indigo-800 text-white p-6 flex justify-between items-center">
             <h2 className="text-2xl font-bold">📋 Quiz & Corrections Review</h2>
             <button
               onClick={() => setShowQuizModal(false)}
-              className="text-2xl hover:bg-indigo-500 p-1 rounded-lg transition-all"
-            >
+              className="text-2xl hover:bg-indigo-500 dark:hover:bg-indigo-600 p-1 rounded-lg transition-all">
               ✕
             </button>
           </div>
@@ -224,21 +223,21 @@ console.log('Context Debug:', {
           <div className="p-8 space-y-8">
             {/* Progress Tracker at Top */}
             <div>
-              <h3 className="text-xl font-bold text-gray-800 mb-4">📊 Your Progress</h3>
+              <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-4">📊 Your Progress</h3>
               <ProgressTracker stats={progressStats} />
             </div>
 
             {/* Original vs Corrected */}
             <div>
-              <h3 className="text-xl font-bold text-gray-800 mb-4">📝 Original vs Corrected Text</h3>
+              <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-4">📝 Original vs Corrected Text</h3>
               <div className="grid md:grid-cols-2 gap-4">
-                <div className="p-6 rounded-xl border-2 border-red-200 bg-red-50">
-                  <h4 className="font-semibold text-red-700 mb-3">Your Original Text</h4>
-                  <p className="text-gray-700 whitespace-pre-wrap leading-relaxed text-sm">{lastInput}</p>
+                <div className="p-6 rounded-xl border-2 border-red-200 dark:border-red-700 bg-red-50 dark:bg-red-900/20">
+                  <h4 className="font-semibold text-red-700 dark:text-red-400 mb-3">Your Original Text</h4>
+                  <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed text-sm">{lastInput}</p>
                 </div>
-                <div className="p-6 rounded-xl border-2 border-green-200 bg-green-50">
-                  <h4 className="font-semibold text-green-700 mb-3">AI Corrections</h4>
-                  <p className="text-gray-700 whitespace-pre-wrap leading-relaxed text-sm font-mono">{currentAnalysis?.corrections}</p>
+                <div className="p-6 rounded-xl border-2 border-green-200 dark:border-green-700 bg-green-50 dark:bg-green-900/20">
+                  <h4 className="font-semibold text-green-700 dark:text-green-400 mb-3">AI Corrections</h4>
+                  <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed text-sm font-mono">{currentAnalysis?.corrections}</p>
                 </div>
               </div>
             </div>
@@ -246,22 +245,22 @@ console.log('Context Debug:', {
             {/* Detailed Errors */}
             {currentAnalysis?.errors && currentAnalysis.errors.length > 0 && (
               <div>
-                <h3 className="text-xl font-bold text-gray-800 mb-4">⚠️ Detailed Error Analysis ({currentAnalysis.errors.length} errors found)</h3>
+                <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-4">⚠️ Detailed Error Analysis ({currentAnalysis.errors.length} errors found)</h3>
                 <div className="space-y-4">
                   {currentAnalysis.errors.map((err, idx) => (
-                    <div key={idx} className="border-l-4 border-yellow-400 bg-yellow-50 p-4 rounded-lg">
+                    <div key={idx} className="border-l-4 border-yellow-400 dark:border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg">
                       <div className="flex justify-between mb-2">
-                        <span className="font-bold text-yellow-900 text-lg">{err.issue}</span>
-                        <span className="bg-yellow-200 text-yellow-900 px-3 py-1 rounded-full text-sm font-semibold">Error #{idx + 1}</span>
+                        <span className="font-bold text-yellow-900 dark:text-yellow-400 text-lg">{err.issue}</span>
+                        <span className="bg-yellow-200 dark:bg-yellow-700 text-yellow-900 dark:text-yellow-200 px-3 py-1 rounded-full text-sm font-semibold">Error #{idx + 1}</span>
                       </div>
                       <div className="mt-3 space-y-2">
-                        <p className="text-sm text-gray-700">
+                        <p className="text-sm text-gray-700 dark:text-gray-300">
                           <span className="font-semibold">❌ Wrong:</span> 
-                          <code className="ml-2 bg-red-100 text-red-800 px-2 py-1 rounded text-xs">{err.example}</code>
+                          <code className="ml-2 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 px-2 py-1 rounded text-xs">{err.example}</code>
                         </p>
-                        <p className="text-sm text-gray-700">
+                        <p className="text-sm text-gray-700 dark:text-gray-300">
                           <span className="font-semibold">✓ Correct:</span> 
-                          <code className="ml-2 bg-green-100 text-green-800 px-2 py-1 rounded text-xs">{err.suggestion}</code>
+                          <code className="ml-2 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-2 py-1 rounded text-xs">{err.suggestion}</code>
                         </p>
                       </div>
                     </div>
@@ -273,9 +272,9 @@ console.log('Context Debug:', {
             {/* Summary */}
             {currentAnalysis?.summary && (
               <div>
-                <h3 className="text-xl font-bold text-gray-800 mb-4">📊 Analysis Summary</h3>
-                <div className="bg-blue-50 border-l-4 border-blue-500 p-6 rounded-lg">
-                  <p className="text-gray-700 leading-relaxed">{currentAnalysis.summary}</p>
+                <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-4">📊 Analysis Summary</h3>
+                <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 dark:border-blue-400 p-6 rounded-lg">
+                  <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{currentAnalysis.summary}</p>
                 </div>
               </div>
             )}
@@ -283,30 +282,30 @@ console.log('Context Debug:', {
             {/* Learning Tip */}
             {currentAnalysis?.tip && (
               <div>
-                <h3 className="text-xl font-bold text-gray-800 mb-4">💡 Learning Tip</h3>
-                <div className="bg-purple-50 border-l-4 border-purple-500 p-6 rounded-lg">
-                  <p className="text-gray-700 leading-relaxed">{currentAnalysis.tip}</p>
+                <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-4">💡 Learning Tip</h3>
+                <div className="bg-purple-50 dark:bg-purple-900/20 border-l-4 border-purple-500 dark:border-purple-400 p-6 rounded-lg">
+                  <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{currentAnalysis.tip}</p>
                 </div>
               </div>
             )}
 
             {/* Explanation Panel */}
             <div>
-              <h3 className="text-xl font-bold text-gray-800 mb-4">📚 Grammar & Language Tips</h3>
+              <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-4">📚 Grammar & Language Tips</h3>
               <ExplanationPanel errors={currentAnalysis?.errors} tip={currentAnalysis?.tip} />
             </div>
 
             {/* Provider Info */}
-            <div className="text-xs text-gray-500 text-right border-t pt-4">
+            <div className="text-xs text-gray-500 dark:text-gray-400 text-right border-t dark:border-gray-700 pt-4">
               Analyzed using {currentAnalysis?.provider} provider
             </div>
           </div>
 
           {/* Modal Footer */}
-          <div className="sticky bottom-0 bg-gray-100 p-6 flex justify-end gap-3 border-t border-gray-200">
+          <div className="sticky bottom-0 bg-gray-100 dark:bg-gray-900 p-6 flex justify-end gap-3 border-t border-gray-200 dark:border-gray-700">
             <button
               onClick={() => setShowQuizModal(false)}
-              className="px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-medium transition-all"
+              className="px-6 py-2 bg-gray-500 hover:bg-gray-600 dark:bg-gray-600 dark:hover:bg-gray-700 text-white rounded-lg font-medium transition-all"
             >
               Close
             </button>
